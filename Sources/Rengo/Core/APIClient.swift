@@ -47,6 +47,28 @@ public final class APIClient<T: Decodable>{
         task.resume()
     }
     
+    public func sendRequest() async throws -> T {
+        guard let url = buildURL() else {
+            throw APIError.invalidURL
+        }
+        
+        let request = buildURLRequest(url: url)
+        
+        do {
+            let (data, response) = try await session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+                throw APIError.invalidResponse
+            }
+            
+            let decodedData = try JSONDecoder().decode(T.self, from: data)
+            return decodedData
+        } catch {
+            throw APIError.otherError(error)
+        }
+    }
+    
+    
     private func buildURL() -> URL? {
         var components = URLComponents(string: endpointConfiguration.baseURL)
         components?.queryItems = endpointConfiguration.parameters?.map {
